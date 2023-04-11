@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+#updated 20230314 for better padding of index 2 and appropriate "no index" index.
+#updated 20230411 for up to 15bp indices and custom index length.
+
+import csv
+import sys
+
+if not len(sys.argv) == 4:
+        sys.stdout.write('Usage: python s4_sheet_padder_v2.py [Desired index length] [Initial sample-sheet.csv] [Padded sample-sheet.csv]' + '\n' + '\n')
+        exit()
+
+index_length = int(sys.argv[1])
+in_sheet = sys.argv[2]
+out_sheet = open(sys.argv[3], "w", newline='', encoding='utf-8')
+
+pads = ["ATCTCGTATGCCGTC","GTGTAGATCTCGGTG","AGATCTCGGTGGTCG"]
+
+def i1padder(index):
+        unpadded_i1 = index
+        fullpad = pads[0]
+        current_length = len(unpadded_i1)
+        bases_short = index_length - current_length
+        needed_pad = fullpad[:bases_short]
+        padded_i1 = unpadded_i1 + needed_pad
+        return(padded_i1)
+        
+        
+def i2padder(index):
+        unpadded_i2 = index
+        fullpad = pads[1]
+        current_length = len(unpadded_i2)
+        bases_short = index_length - current_length
+        needed_pad = fullpad[:bases_short]
+        padded_i2 = unpadded_i2 + needed_pad
+        return(padded_i2)
+
+def i2maker(index):
+        no_i2 = index
+        fullpad = pads[2]
+        current_length = 0
+        bases_short = index_length - current_length
+        needed_i2 = fullpad[:bases_short]
+        made_i2 = needed_i2
+        return(made_i2)
+        
+
+#write headers to the padded sample sheet
+out_sheet.write('[Data],,,,,' + '\n')                           
+out_sheet.write('Lane,Sample_Name,Sample_ID,Index,Index2,Sample_Project' + '\n')
+writer = csv.writer(out_sheet, dialect='unix',quoting=csv.QUOTE_MINIMAL)
+
+with open(in_sheet) as short_sheet: #read through the original sample sheet
+        short_sheet_reader = csv.reader(short_sheet)
+        for row in short_sheet_reader:
+                if not row[0].isdigit(): #sample lines must start with lane number
+                        continue
+                if len(row[3]) + len(row[4]) == index_length + index_length: #assuming the indices are equal length
+                        writer.writerow(row)
+                if 'SI-' in row[3]: #passing though 10X index identifiers
+                        writer.writerow(row)            
+                if not len(row[3]) + len(row[4]) == index_length + index_length: #the lines we need to pad
+                        if not len(row[3]) == index_length:
+                                new_i1 = i1padder(row[3])
+                                row[3] = new_i1
+                        if len(row[4]) == 0:
+                        		full_i2 = i2maker(row[4]) 
+                        		row[4] = full_i2
+                        if not len(row[4]) == index_length:
+                                new_i2 = i2padder(row[4])
+                                row[4] = new_i2
+                        writer.writerow(row)
+
+
+        
+short_sheet.close()
+out_sheet.close()  
